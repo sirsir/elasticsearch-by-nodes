@@ -1,0 +1,17 @@
+{
+  "name": "elasticsearch-by-nodes",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node app.js",
+    "checkImportData": "node scripts/checkImportData.js"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "elasticsearch": "^15.1.1",
+    "event-stream": "^3.3.4"
+  }
+}
