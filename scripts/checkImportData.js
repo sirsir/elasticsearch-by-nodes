@@ -14,18 +14,18 @@ var lineNr = 0;
 var voicelogs = []
 
 
-const checkImportData ={
+const checkImportData = {
   streams: {
     imported:{},
     importedFail:{}
   },
-  openFiles: function(){
-    checkImportData.streams.imported = fs.createWriteStream('outputs/elasticsearch_imported.txt');
-    checkImportData.streams.importedFail = fs.createWriteStream('outputs/elasticsearch_imported_FAIL.txt');
+  openFiles: function() {
+    this.streams.imported = fs.createWriteStream('outputs/elasticsearch_imported.txt');
+    this.streams.importedFail = fs.createWriteStream('outputs/elasticsearch_imported_FAIL.txt');
   },
-  closeFiles: function(){
-    checkImportData.streams.imported.end();
-    checkImportData.streams.importedFail.end();
+  closeFiles: function() {
+    this.streams.imported.end();
+    this.streams.importedFail.end();
   },
   // queryTest: function(){
   //   let response = client.search({
@@ -45,7 +45,7 @@ const checkImportData ={
   //     }
   //   })
   // },
-  isImported: function(obj){
+  isImported: function(obj) {
     return new Promise( (resolve, reject) =>{
       try {
         client.search({
@@ -72,7 +72,8 @@ const checkImportData ={
       }
     })
   },
-  getObj: function(l){
+
+  getObj: function(l) {
     return new Promise( (resolve, reject) =>{
       try {
         let obj = {
@@ -86,146 +87,104 @@ const checkImportData ={
       }
     })
   },
-  save2imported:function(l){
-    checkImportData.streams.imported.write(l + "\n");
+
+  save2imported: function(l) {
+    this.streams.imported.write(l + "\n");
   },
- save2importedError:function(l){
-    checkImportData.streams.importedFail.write(l + "\n");
+
+  save2importedError: function(l) {
+    this.streams.importedFail.write(l + "\n");
   },
-  checkImportFromLine:function(l){
+
+  checkImportFromLine: function(l) {
     return new Promise( (resolve, reject) =>{
       try {
-        checkImportData.getObj(l)
-        .then(checkImportData.isImported)
-        .then(checkImportData.save2imported)
-        .catch(checkImportData.save2importedError)
+        this.getObj(l)
+        .then(this.isImported)
+        .then(this.save2imported)
+        .catch(this.save2importedError)
         .then(resolve)
       } catch(e) {
         reject(e)
       }
-    })
-    
-
-    // getObj(l)
-    // .then(obj =>{
-    //   return checkImportData.isImported(obj);
-    // })
-    // .then(l => {
-    //   checkImportData.save2imported(l);
-
-    // })
-    // .catch(l=>{
-    //   checkImportData.save2imported(l);
-    // })
-    
+    })        
   },
-  // importLine: function(l){
-  //   console.log(lineNr)
-  //   data = JSON.parse(l)
-    
-  //   resultFile.write(data._id+ "\n")
-  //   let response = client.create({
-  //     index: 'as_voice_logs',
-  //     type: 'voice_log',
-  //     id: data._id,
-  //     body: data._source
-  //   }).then( response=>{
-  //     // console.log(response)
-  //     resultFile.write(response+ "\n")
-  //   })
+  run: function(){
+    // console.log(this)
+    this.openFiles()
+    // var resultFile = fs.createWriteStream('outputs/elasticsearch_insert_result.txt')
 
-  // },
-  // pushVl: function(l){
-  //   try{
-  //     console.log(lineNr)
-  //     data = JSON.parse(l)
 
-  //     var {keyword_results,recognition_results,recognizer_stats,vergeins,...vl} = data._source
-      
-  //     voicelogs.push(vl)
-  //   }catch (e) {
-  //     console.log('Error in pushVl()', e)
-  //   }
+    var s = fs.createReadStream(blobFilePath)
+        .pipe(es.split())
+        .pipe(es.mapSync(function(line){
 
-  // }
+            s.pause();
+
+            console.log(++lineNr)
+
+            checkImportData.checkImportFromLine(line)
+            .catch()
+            .then(s.resume)
+
+            if (lineNr > 3){
+              s.destroy();
+            }
+
+            
+        })
+        .on('error', function(err){
+            console.log('Error while reading file.', err);
+            // resultFile.write('Error while reading file.'+ err+ "\n")
+        })
+        .on('end', function(){
+          console.log('Read entire file.')
+
+          this.closeFiles()
+
+        })
+    );
+  }
+
 }
 
-checkImportData.openFiles()
-var resultFile = fs.createWriteStream('outputs/elasticsearch_insert_result.txt')
+checkImportData.run()
+// checkImportData.run.apply(checkImportData)
+ // setTimeout(checkImportData.run.bind(checkImportData), 1000);
+ // var run = checkImportData.run.bind(checkImportData);
+ // run()
+    
+// checkImportData.openFiles()
+// var resultFile = fs.createWriteStream('outputs/elasticsearch_insert_result.txt')
 
 
-var s = fs.createReadStream(blobFilePath)
-    .pipe(es.split())
-    .pipe(es.mapSync(function(line){
+// var s = fs.createReadStream(blobFilePath)
+//     .pipe(es.split())
+//     .pipe(es.mapSync(function(line){
 
-        // pause the readstream
-        s.pause();
+//         s.pause();
 
-        // lineNr += 1;
-        console.log(++lineNr)
+//         console.log(++lineNr)
 
-        // process line here and call s.resume() when rdy
-        // function below was for logging memory usage
+//         checkImportData.checkImportFromLine(line)
+//         .catch()
+//         .then(s.resume)
 
-        // logMemoryUsage(lineNr);
-        // app_fn.importLine(line);
-        // app_fn.pushVl(line);
-        checkImportData.checkImportFromLine(line)
-        .catch()
-        .then(s.resume)
-
-        // if (lineNr > 3){
-        //   s.destroy();
-        // }
+//         if (lineNr > 3){
+//           s.destroy();
+//         }
 
         
-    })
-    .on('error', function(err){
-        console.log('Error while reading file.', err);
-        resultFile.write('Error while reading file.'+ err+ "\n")
-    })
-    .on('end', function(){
-      console.log('Read entire file.')
+//     })
+//     .on('error', function(err){
+//         console.log('Error while reading file.', err);
+//         resultFile.write('Error while reading file.'+ err+ "\n")
+//     })
+//     .on('end', function(){
+//       console.log('Read entire file.')
 
-      checkImportData.closeFiles()
-      // keys = Object.keys(voicelogs[0])
-      // // console.log(voiceIds.join("\n"))
-      // values = voicelogs.map(vl=>{
-      //   let arr = []
-      //   keys.forEach(k=>{
-      //     arr.push(vl[k])
-      //   })
-      //   arr = arr.map(v=>`'${v}'`).join(',')
-      //   return `(${arr})`
-      // }).join(",\n")
+//       checkImportData.closeFiles()
 
-      // query = `INSERT INTO voicelogs (${keys.join(',')})
-      // VALUES ${values}
-      // `
-      // fs.writeFile('outputs/sql_insert.txt', query, (err) => {  
-      //   // throws an error, you could also catch it here
-      //   if (err) throw err;
-
-      //   // success case, the file was saved
-      //   console.log('SQL insert query was written to file!');
-      // });
-
-
-      // ids = voicelogs.map(vl=> vl.id)
-      // .join(',')
-
-      // ids = `(${ids})`
-
-      // fs.writeFile('outputs/ids.txt', ids, (err) => {  
-      //   // throws an error, you could also catch it here
-      //   if (err) throw err;
-
-      //   // success case, the file was saved
-      //   console.log('All id written to file!');
-      // });
-      
-
-
-    })
-);
+//     })
+// );
 
